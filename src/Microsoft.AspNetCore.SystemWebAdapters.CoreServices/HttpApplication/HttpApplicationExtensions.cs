@@ -105,7 +105,7 @@ public static class HttpApplicationExtensions
                 {
                     await appFeature.RaiseEventAsync(@event);
 
-                    if (endFeature.IsEnded)
+                    if (endFeature.IsEnded || appFeature.IsRequestCompleted)
                     {
                         return;
                     }
@@ -115,7 +115,7 @@ public static class HttpApplicationExtensions
 
                 foreach (var @event in postEvents)
                 {
-                    if (endFeature.IsEnded)
+                    if (endFeature.IsEnded || appFeature.IsRequestCompleted)
                     {
                         return;
                     }

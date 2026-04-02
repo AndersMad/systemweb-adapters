@@ -186,6 +186,47 @@ public abstract class ModuleTests<T>
         Assert.Equal(Result, await response.Content.ReadAsStringAsync());
     }
 
+    [Fact]
+    public async Task CompleteRequestDoesNotPreventCurrentHandlerFromWritingResponse()
+    {
+        const string HeaderName = "X-Test";
+        const string HeaderValue = "value";
+        const string Result = "Hello world!";
+
+        using var host = await new HostBuilder()
+            .ConfigureWebHost(webBuilder => webBuilder
+                .UseTestServer()
+                .ConfigureServices(services =>
+                {
+                    services.AddSystemWebAdapters()
+                        .AddHttpApplication(options =>
+                        {
+                            options.RegisterModule<BufferToggleModule>();
+                        });
+                })
+                .Configure(app =>
+                {
+                    app.UseSystemWebAdapters();
+
+                    app.Run(async ctx =>
+                    {
+                        var context = ctx.AsSystemWeb();
+                        context.ApplicationInstance.CompleteRequest();
+                        context.Response.AppendHeader(HeaderName, HeaderValue);
+                        context.Response.ContentType = "text/plain";
+                        await ctx.Response.WriteAsync(Result);
+                    });
+                }))
+            .StartAsync();
+
+        using var response = await host.GetTestClient().GetAsync(new Uri("/", UriKind.Relative));
+
+        Assert.True(response.Headers.TryGetValues(HeaderName, out var headerValues));
+        Assert.Equal([HeaderValue], headerValues);
+        Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(Result, await response.Content.ReadAsStringAsync());
+    }
+
     private sealed class PreSendHeadersAddHeaderModule : IHttpModule
     {
         public void Dispose()
@@ -269,6 +310,10 @@ public abstract class ModuleTests<T>
 
                     if (notification is ApplicationEvent.PreSendRequestHeaders)
                     {
+                        if (!isThrowing)
+                        {
+                            yield return ApplicationEvent.PreSendRequestContent;
+                        }
                         break;
                     }
                 }
@@ -287,11 +332,18 @@ public abstract class ModuleTests<T>
             foreach (var r in remaining)
             {
                 yield return r;
+
+                if (!isThrowing && notification is ApplicationEvent.PreSendRequestHeaders or ApplicationEvent.PreSendRequestContent)
+                {
+                    yield return ApplicationEvent.PreSendRequestContent;
+                }
             }
 
             var expectsFinalPreSendRequestContent = !(isThrowing && notification is ApplicationEvent.PreSendRequestContent or ApplicationEvent.PreSendRequestHeaders);
 
-            if (!remaining.IsEmpty && expectsFinalPreSendRequestContent)
+            if (!remaining.IsEmpty &&
+                expectsFinalPreSendRequestContent &&
+                notification is not (ApplicationEvent.PreSendRequestHeaders or ApplicationEvent.PreSendRequestContent))
             {
                 yield return ApplicationEvent.PreSendRequestContent;
             }

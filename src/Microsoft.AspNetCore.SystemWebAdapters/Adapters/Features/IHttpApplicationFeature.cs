@@ -31,6 +31,11 @@ public interface IHttpApplicationFeature
     ValueTask RaiseEventAsync(ApplicationEvent appEvent);
 
     /// <summary>
+    /// Marks the current request as completed so the remaining emulated pipeline steps are skipped.
+    /// </summary>
+    void CompleteRequest();
+
+    /// <summary>
     /// Gets the current <see cref="RequestNotification"/> of where the request is in an emulated IIS pipeline.
     /// </summary>
     RequestNotification CurrentNotification { get; }
@@ -39,6 +44,11 @@ public interface IHttpApplicationFeature
     /// Gets whether the <see cref="CurrentNotification"/> of the emulated IIS pipeline is in a post condition.
     /// </summary>
     bool IsPostNotification { get; }
+
+    /// <summary>
+    /// Gets whether <see cref="CompleteRequest"/> has been called for the current request.
+    /// </summary>
+    bool IsRequestCompleted { get; }
 }
 
 #endif

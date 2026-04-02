@@ -66,7 +66,17 @@ public class HttpApplication : IDisposable
 
     public IPrincipal User => Context.User;
 
-    public void CompleteRequest() => Context.Response.End();
+    public void CompleteRequest()
+    {
+        var feature = Context.AsAspNetCore().Features.Get<IHttpApplicationFeature>();
+
+        if (feature is null)
+        {
+            throw new InvalidOperationException(HttpApplicationMustBeInitialized);
+        }
+
+        feature.CompleteRequest();
+    }
 
     public virtual string? GetVaryByCustomString(HttpContext context, string custom)
     {

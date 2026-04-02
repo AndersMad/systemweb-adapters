@@ -63,6 +63,10 @@ internal sealed partial class OwinHttpApplicationIntegrationStartup(
 
         bool IHttpApplicationFeature.IsPostNotification => other.IsPostNotification;
 
+        bool IHttpApplicationFeature.IsRequestCompleted => other.IsRequestCompleted;
+
+        void IHttpApplicationFeature.CompleteRequest() => other.CompleteRequest();
+
         async ValueTask IHttpApplicationFeature.RaiseEventAsync(ApplicationEvent appEvent)
         {
             await other.RaiseEventAsync(appEvent);

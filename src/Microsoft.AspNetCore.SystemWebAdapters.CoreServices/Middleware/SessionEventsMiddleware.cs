@@ -39,7 +39,8 @@ internal sealed class SessionEventsMiddleware
 
         await _next(context);
 
-        if (context.Features.GetRequiredFeature<IHttpResponseEndFeature>().IsEnded)
+        var appFeature = context.Features.GetRequiredFeature<IHttpApplicationFeature>();
+        if (context.Features.GetRequiredFeature<IHttpResponseEndFeature>().IsEnded || appFeature.IsRequestCompleted)
         {
             return;
         }
@@ -57,13 +58,14 @@ internal sealed class SessionEventsMiddleware
             }
         }
 
-        await context.Features.GetRequiredFeature<IHttpApplicationFeature>().RaiseEventAsync(ApplicationEvent.PostReleaseRequestState);
+        await appFeature.RaiseEventAsync(ApplicationEvent.PostReleaseRequestState);
     }
 
     private static async ValueTask<bool> RunEventAsync(HttpContextCore context, ApplicationEvent @event)
     {
-        await context.Features.GetRequiredFeature<IHttpApplicationFeature>().RaiseEventAsync(@event);
+        var appFeature = context.Features.GetRequiredFeature<IHttpApplicationFeature>();
+        await appFeature.RaiseEventAsync(@event);
 
-        return context.Features.GetRequiredFeature<IHttpResponseEndFeature>().IsEnded;
+        return context.Features.GetRequiredFeature<IHttpResponseEndFeature>().IsEnded || appFeature.IsRequestCompleted;
     }
 }

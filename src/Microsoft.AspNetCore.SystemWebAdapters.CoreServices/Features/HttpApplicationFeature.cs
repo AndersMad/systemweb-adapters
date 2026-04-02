@@ -41,6 +41,8 @@ internal sealed class HttpApplicationFeature : IHttpApplicationFeature, IHttpRes
 
     public bool IsEnded { get; private set; }
 
+    public bool IsRequestCompleted { get; private set; }
+
     public HttpApplication Application => _contextOrApplication switch
     {
         HttpContextCore context => InitializeApplication(context),
@@ -62,6 +64,8 @@ internal sealed class HttpApplicationFeature : IHttpApplicationFeature, IHttpRes
         RaiseEvent(@event);
         return ValueTask.CompletedTask;
     }
+
+    void IHttpApplicationFeature.CompleteRequest() => IsRequestCompleted = true;
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Must handle all exceptions here")]
     private void RaiseEvent(ApplicationEvent appEvent)
@@ -147,6 +151,7 @@ internal sealed class HttpApplicationFeature : IHttpApplicationFeature, IHttpRes
             return;
         }
 
+        IsRequestCompleted = true;
         IsEnded = true;
 
         RaiseEvent(ApplicationEvent.LogRequest);
