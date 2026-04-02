@@ -5,7 +5,7 @@ using Microsoft.Extensions.Primitives;
 
 namespace Microsoft.AspNetCore.SystemWebAdapters.Internal
 {
-    internal class StringValuesDictionaryNameValueCollection : NoGetByIntNameValueCollection
+    internal class StringValuesDictionaryNameValueCollection : HttpValueCollection
     {
         private readonly IDictionary<string, StringValues> _values;
 
@@ -17,6 +17,15 @@ namespace Microsoft.AspNetCore.SystemWebAdapters.Internal
         public override string?[] AllKeys => _values.Keys.ToArray();
 
         public override int Count => _values.Count;
+
+        public override string? Get(int index)
+            => Get(GetKey(index));
+
+        public override string? GetKey(int index)
+            => index >= 0 && index < _values.Count ? _values.Keys.ElementAt(index) : null;
+
+        public override string[]? GetValues(int index)
+            => GetValues(GetKey(index));
 
         public override void Add(string? name, string? value)
         {
