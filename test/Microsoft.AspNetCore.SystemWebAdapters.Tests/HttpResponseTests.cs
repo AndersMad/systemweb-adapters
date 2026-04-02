@@ -325,7 +325,7 @@ public class HttpResponseTests
 
         // Assert
         feature.Verify(f => f.ClearContent(), Times.Once);
-        Assert.Empty(headers);
+        Assert.Equal("application/json", headers[HeaderNames.ContentType].ToString());
     }
 
     [Fact]

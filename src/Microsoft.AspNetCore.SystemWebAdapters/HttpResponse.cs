@@ -307,11 +307,7 @@ namespace System.Web
             OutputStream.Write(buffer, 0, buffer.Length);
         }
 
-        public void Clear()
-        {
-            Response.Clear();
-            ClearContent();
-        }
+        public void Clear() => ClearContent();
 
         public void ClearContent() => Response.HttpContext.Features.GetRequiredFeature<IHttpResponseContentFeature>().ClearContent();
 
