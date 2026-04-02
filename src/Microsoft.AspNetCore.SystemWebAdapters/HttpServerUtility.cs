@@ -17,10 +17,12 @@ namespace System.Web;
 public class HttpServerUtility
 {
     private readonly HttpContextCore _context;
+    private readonly HttpContext _systemWebContext;
 
-    internal HttpServerUtility(HttpContextCore context)
+    internal HttpServerUtility(HttpContext context)
     {
-        _context = context;
+        _systemWebContext = context;
+        _context = context.Context;
     }
 
     public string MachineName => Environment.MachineName;
@@ -28,9 +30,9 @@ public class HttpServerUtility
     public string MapPath(string? path)
         => _context.RequestServices.GetRequiredService<IMapPathUtility>().MapPath(_context.Request.Path, path);
 
-    public Exception? GetLastError() => _context.AsSystemWeb().Error;
+    public Exception? GetLastError() => _systemWebContext.Error;
 
-    public void ClearError() => _context.AsSystemWeb().ClearError();
+    public void ClearError() => _systemWebContext.ClearError();
 
     /// <summary>
     /// This method is similar to <see cref="WebEncoders.Base64UrlDecode(string)"/> but handles the trailing character that <see cref="UrlTokenEncode(byte[])"/>

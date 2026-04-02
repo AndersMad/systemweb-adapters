@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -99,8 +101,27 @@ public class HttpResponseTests
         response.TrySkipIisCustomErrors = isEnabled;
 
         // Assert
-        Assert.Equal(isEnabled, feature.Object.Enabled);
+        Assert.Equal(!isEnabled, feature.Object.Enabled);
         Assert.Equal(isEnabled, response.TrySkipIisCustomErrors);
+    }
+
+    [Fact]
+    public void TrySkipIisCustomErrorsWithoutFeatureDoesNotThrow()
+    {
+        var features = new FeatureCollection();
+
+        var context = new Mock<HttpContextCore>();
+        context.Setup(c => c.Features).Returns(features);
+
+        var responseCore = new Mock<HttpResponseCore>();
+        responseCore.Setup(r => r.HttpContext).Returns(context.Object);
+        responseCore.SetupProperty(r => r.StatusCode);
+
+        var response = new HttpResponse(responseCore.Object);
+
+        response.TrySkipIisCustomErrors = true;
+
+        Assert.True(response.TrySkipIisCustomErrors);
     }
 
     [Theory]
@@ -155,6 +176,20 @@ public class HttpResponseTests
 
         // Assert
         feature.Verify(f => f.EndAsync(), Times.Once);
+    }
+
+    [Fact]
+    public void HeadersWrittenReturnsTrueWhenContextDisposed()
+    {
+        // Arrange
+        var featureCollection = new ThrowingResponseFeatureCollection();
+        var coreContext = new DefaultHttpContext(featureCollection);
+        var response = new HttpResponse(coreContext.Response);
+
+        featureCollection.ThrowOnAccess = true;
+
+        // Act / Assert
+        Assert.True(response.HeadersWritten);
     }
 
     [Fact]
@@ -604,4 +639,35 @@ public class HttpResponseTests
 
         endFeature.Verify(b => b.EndAsync(), isEndCalled ? Times.Once : Times.Never);
     }
+}
+
+internal sealed class ThrowingResponseFeatureCollection : IFeatureCollection
+{
+    private readonly FeatureCollection _inner = new();
+
+    public bool ThrowOnAccess { get; set; }
+
+    public bool IsReadOnly => _inner.IsReadOnly;
+
+    public int Revision => _inner.Revision;
+
+    public object? this[Type key]
+    {
+        get => ThrowOnAccess ? throw new ObjectDisposedException(nameof(HttpContext)) : _inner[key];
+        set => _inner[key] = value;
+    }
+
+    public TFeature? Get<TFeature>()
+    {
+        return ThrowOnAccess ? throw new ObjectDisposedException(nameof(HttpContext)) : _inner.Get<TFeature>();
+    }
+
+    public void Set<TFeature>(TFeature? instance)
+    {
+        _inner.Set(instance);
+    }
+
+    public IEnumerator<KeyValuePair<Type, object>> GetEnumerator() => _inner.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

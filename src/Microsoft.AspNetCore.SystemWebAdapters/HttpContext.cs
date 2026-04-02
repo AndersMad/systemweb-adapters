@@ -26,6 +26,7 @@ public class HttpContext : IServiceProvider
     private HttpServerUtility? _server;
     private IDictionary? _items;
     private TraceContext? _trace;
+    private Exception[]? _cachedErrors;
 
     public static HttpContext? Current
     {
@@ -58,18 +59,58 @@ public class HttpContext : IServiceProvider
         }
     }
 
-    public HttpServerUtility Server => _server ??= new(Context);
+    public HttpServerUtility Server => _server ??= new(this);
 
     public TraceContext Trace => _trace ??= new(Context);
 
-    public Exception? Error => Context.Features.Get<IRequestExceptionFeature>()?.Exceptions is [{ } error, ..] ? error : null;
+    public Exception? Error => GetCachedErrors() is [{ } error, ..] ? error : null;
 
     [SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = Constants.ApiFromAspNet)]
-    public Exception[] AllErrors => Context.Features.Get<IRequestExceptionFeature>()?.Exceptions.ToArray() ?? Array.Empty<Exception>();
+    public Exception[] AllErrors => GetCachedErrors();
 
-    public void ClearError() => Context.Features.Get<IRequestExceptionFeature>()?.Clear();
+    public void ClearError()
+    {
+        _cachedErrors = Array.Empty<Exception>();
+        TryGetExceptionFeature()?.Clear();
+    }
 
-    public void AddError(Exception ex) => Context.Features.Get<IRequestExceptionFeature>()?.Add(ex);
+    public void AddError(Exception ex)
+    {
+        ArgumentNullException.ThrowIfNull(ex);
+
+        if (TryGetExceptionFeature() is { } feature)
+        {
+            feature.Add(ex);
+            _cachedErrors = feature.Exceptions?.ToArray() ?? [ex];
+            return;
+        }
+
+        _cachedErrors = _cachedErrors is { Length: > 0 } errors
+            ? errors.Concat([ex]).ToArray()
+            : [ex];
+    }
+
+    private Exception[] GetCachedErrors()
+    {
+        if (TryGetExceptionFeature() is { } feature)
+        {
+            return _cachedErrors = feature.Exceptions.ToArray();
+        }
+
+        return _cachedErrors ?? Array.Empty<Exception>();
+    }
+
+    private IRequestExceptionFeature? TryGetExceptionFeature()
+    {
+        try
+        {
+            return Context.Features.Get<IRequestExceptionFeature>();
+        }
+        catch (ObjectDisposedException)
+        {
+            return null;
+        }
+    }
 
     public RequestNotification CurrentNotification => Context.Features.GetRequiredFeature<IHttpApplicationFeature>().CurrentNotification;
 

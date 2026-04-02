@@ -72,8 +72,14 @@ namespace System.Web
 
         public bool TrySkipIisCustomErrors
         {
-            get => Response.HttpContext.Features.GetRequiredFeature<IStatusCodePagesFeature>().Enabled;
-            set => Response.HttpContext.Features.GetRequiredFeature<IStatusCodePagesFeature>().Enabled = value;
+            get => Response.HttpContext.Features.Get<IStatusCodePagesFeature>() is not { } feature || !feature.Enabled;
+            set
+            {
+                if (Response.HttpContext.Features.Get<IStatusCodePagesFeature>() is { } feature)
+                {
+                    feature.Enabled = !value;
+                }
+            }
         }
 
         public bool BufferOutput
@@ -199,7 +205,17 @@ namespace System.Web
 
         public bool HeadersWritten
         {
-            get => Response.HasStarted;
+            get
+            {
+                try
+                {
+                    return Response.HasStarted;
+                }
+                catch (ObjectDisposedException)
+                {
+                    return true;
+                }
+            }
         }
 
         public string? RedirectLocation

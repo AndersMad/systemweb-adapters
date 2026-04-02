@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Security.Principal;
@@ -10,6 +11,7 @@ using System.Web.Caching;
 using System.Web.SessionState;
 using AutoFixture;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.SystemWebAdapters.Features;
 using Microsoft.AspNetCore.SystemWebAdapters.SessionState;
@@ -441,6 +443,56 @@ namespace Microsoft.AspNetCore.SystemWebAdapters
             exceptionFeature.Verify(f => f.Add(error), Times.Once);
         }
 
+        [Fact]
+        public void ErrorReturnsCachedValueWhenContextDisposed()
+        {
+            // Arrange
+            var featureCollection = new ThrowingFeatureCollection();
+            var coreContext = new DefaultHttpContext(featureCollection);
+            var context = new HttpContext(coreContext);
+            var error = new InvalidOperationException();
+
+            var exceptionFeature = new Mock<IRequestExceptionFeature>();
+            exceptionFeature.SetupGet(f => f.Exceptions).Returns([error]);
+            featureCollection.Set(exceptionFeature.Object);
+
+            // Prime the cache while the request is still active
+            Assert.Same(error, context.Error);
+            Assert.Equal([error], context.AllErrors);
+
+            featureCollection.ThrowOnAccess = true;
+
+            // Act / Assert
+            Assert.Same(error, context.Error);
+            Assert.Equal([error], context.AllErrors);
+            Assert.Same(error, context.Server.GetLastError());
+
+            context.ClearError();
+
+            Assert.Null(context.Error);
+            Assert.Empty(context.AllErrors);
+        }
+
+        [Fact]
+        public void AddErrorCachesValueWhenContextDisposed()
+        {
+            // Arrange
+            var featureCollection = new ThrowingFeatureCollection
+            {
+                ThrowOnAccess = true,
+            };
+            var context = new HttpContext(new DefaultHttpContext(featureCollection));
+            var error = new InvalidOperationException();
+
+            // Act
+            context.AddError(error);
+
+            // Assert
+            Assert.Same(error, context.Error);
+            Assert.Equal([error], context.AllErrors);
+            Assert.Same(error, context.Server.GetLastError());
+        }
+
         [InlineData("path1", "/path1", null)]
         [InlineData("/path1", "/path1", null)]
         [InlineData("path1?", "/path1", "")]
@@ -607,6 +659,37 @@ namespace Microsoft.AspNetCore.SystemWebAdapters
                 context.Context.Features.Set<IRequestUserFeature>(features);
                 context.Context.Features.Set<IHttpAuthenticationFeature>(features);
             }
+        }
+
+        private sealed class ThrowingFeatureCollection : IFeatureCollection
+        {
+            private readonly FeatureCollection _inner = new();
+
+            public bool ThrowOnAccess { get; set; }
+
+            public bool IsReadOnly => _inner.IsReadOnly;
+
+            public int Revision => _inner.Revision;
+
+            public object? this[Type key]
+            {
+                get => ThrowOnAccess ? throw new ObjectDisposedException(nameof(HttpContext)) : _inner[key];
+                set => _inner[key] = value;
+            }
+
+            public TFeature? Get<TFeature>()
+            {
+                return ThrowOnAccess ? throw new ObjectDisposedException(nameof(HttpContext)) : _inner.Get<TFeature>();
+            }
+
+            public void Set<TFeature>(TFeature? instance)
+            {
+                _inner.Set(instance);
+            }
+
+            public IEnumerator<KeyValuePair<Type, object>> GetEnumerator() => _inner.GetEnumerator();
+
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
     }
 }
