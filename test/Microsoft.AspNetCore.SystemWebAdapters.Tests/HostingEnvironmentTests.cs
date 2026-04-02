@@ -23,6 +23,7 @@ public class HostingEnvironmentTests
     [InlineData("~/MyUploadedFiles", "MyUploadedFiles")]
     [InlineData("/UploadedFiles", "UploadedFiles")]
     [InlineData("/NotRealFolder", "NotRealFolder")]
+    [InlineData("/x/y.css?edge&etag=z", "x\\y.css")]
     [InlineData("/TrailingSlash/", "TrailingSlash\\")]
     [InlineData("\\TrailingSlash2\\", "TrailingSlash2\\")]
     [InlineData("\\\\SomeServer\\Share\\Path", "SomeServer\\Share\\Path")]

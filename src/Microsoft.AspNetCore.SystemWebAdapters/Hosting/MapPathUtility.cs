@@ -17,6 +17,9 @@ internal sealed class MapPathUtility : IMapPathUtility
 
     public string MapPath(string requestPath, string? path)
     {
+        requestPath = TrimQueryAndFragment(requestPath);
+        path = TrimQueryAndFragment(path);
+
         var appPath = string.IsNullOrEmpty(path)
             ? VirtualPathUtilityImpl.GetDirectory(requestPath)
             : _pathUtility.Combine(VirtualPathUtilityImpl.GetDirectory(requestPath) ?? "/", path);
@@ -42,5 +45,14 @@ internal sealed class MapPathUtility : IMapPathUtility
             combined = combined.TrimEnd(Path.DirectorySeparatorChar);
 
         return combined;
+    }
+
+    private static string? TrimQueryAndFragment(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return path;
+
+        var separatorIndex = path.IndexOfAny(['?', '#']);
+        return separatorIndex >= 0 ? path[..separatorIndex] : path;
     }
 }
