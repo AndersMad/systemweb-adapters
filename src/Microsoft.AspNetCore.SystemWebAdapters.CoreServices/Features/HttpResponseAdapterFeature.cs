@@ -104,6 +104,11 @@ internal class HttpResponseAdapterFeature :
 
     private async ValueTask FlushInternalAsync()
     {
+        if (_state == StreamState.Complete)
+        {
+            return;
+        }
+
         if (_pipeWriter is { })
         {
             await _pipeWriter.FlushAsync();
