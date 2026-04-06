@@ -25,9 +25,9 @@ internal static class HostingRuntimeExtensions
         services.TryAddSingleton<IMapPathUtility, MapPathUtility>();
         services.TryAddEnumerable(ServiceDescriptor.Transient<IStartupFilter, HostingEnvironmentStartupFilter>());
 
-        services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<SystemWebAdaptersOptions>, OlderIISModuleSupport>());
-        services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<SystemWebAdaptersOptions>, EnvironmentFeatureConfigureOptions>());
-        services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<SystemWebAdaptersOptions>, DefaultAppPathConfigureOptions>());
+        services.TryAddEnumerable(ServiceDescriptor.Transient<IPostConfigureOptions<SystemWebAdaptersOptions>, OlderIISModuleSupport>());
+        services.TryAddEnumerable(ServiceDescriptor.Transient<IPostConfigureOptions<SystemWebAdaptersOptions>, EnvironmentFeatureConfigureOptions>());
+        services.TryAddEnumerable(ServiceDescriptor.Transient<IPostConfigureOptions<SystemWebAdaptersOptions>, DefaultAppPathConfigureOptions>());
     }
 
     /// <summary>
@@ -35,16 +35,31 @@ internal static class HostingRuntimeExtensions
     /// we load at startup so that regardless of version and server this may be available (for example, in case some
     /// one wants to set the environment variables on a Kestrel hosted system to get the behavior)
     /// </summary>
-    private sealed class EnvironmentFeatureConfigureOptions(IServer server) : IConfigureOptions<SystemWebAdaptersOptions>
+    private sealed class EnvironmentFeatureConfigureOptions(IServer server) : IPostConfigureOptions<SystemWebAdaptersOptions>
     {
-        public void Configure(SystemWebAdaptersOptions options)
+        public void PostConfigure(string? name, SystemWebAdaptersOptions options)
         {
             if (server.Features.Get<IIISEnvironmentFeature>() is { } feature)
             {
-                options.ApplicationPhysicalPath = feature.ApplicationPhysicalPath;
-                options.ApplicationVirtualPath = feature.ApplicationVirtualPath;
-                options.ApplicationID = feature.ApplicationId;
-                options.SiteName = feature.SiteName;
+                if (options.ApplicationPhysicalPath == AppContext.BaseDirectory)
+                {
+                    options.ApplicationPhysicalPath = feature.ApplicationPhysicalPath;
+                }
+
+                if (options.ApplicationVirtualPath == "/")
+                {
+                    options.ApplicationVirtualPath = feature.ApplicationVirtualPath;
+                }
+
+                if (string.IsNullOrEmpty(options.ApplicationID))
+                {
+                    options.ApplicationID = feature.ApplicationId;
+                }
+
+                if (string.IsNullOrEmpty(options.SiteName))
+                {
+                    options.SiteName = feature.SiteName;
+                }
             }
         }
     }
@@ -52,21 +67,28 @@ internal static class HostingRuntimeExtensions
     /// <summary>
     /// On ASP.NET Core this should be the same. We're doing it here rather than a PostConfigure because someone may want to set it up differently
     /// </summary>
-    private sealed class DefaultAppPathConfigureOptions : IConfigureOptions<SystemWebAdaptersOptions>
+    private sealed class DefaultAppPathConfigureOptions : IPostConfigureOptions<SystemWebAdaptersOptions>
     {
-        public void Configure(SystemWebAdaptersOptions options)
+        public void PostConfigure(string? name, SystemWebAdaptersOptions options)
         {
-            options.AppDomainAppPath = options.ApplicationPhysicalPath;
-            options.AppDomainAppVirtualPath = options.ApplicationVirtualPath;
+            if (options.AppDomainAppPath == AppContext.BaseDirectory)
+            {
+                options.AppDomainAppPath = options.ApplicationPhysicalPath;
+            }
+
+            if (options.AppDomainAppVirtualPath == "/")
+            {
+                options.AppDomainAppVirtualPath = options.ApplicationVirtualPath;
+            }
         }
     }
 
     /// <summary>
     /// This configures for anyone using older IIS modules that don't set the values (and to maintain behavior with the adapters <1.3)
     /// </summary>
-    private sealed class OlderIISModuleSupport : IConfigureOptions<SystemWebAdaptersOptions>
+    private sealed class OlderIISModuleSupport : IPostConfigureOptions<SystemWebAdaptersOptions>
     {
-        public void Configure(SystemWebAdaptersOptions options)
+        public void PostConfigure(string? name, SystemWebAdaptersOptions options)
         {
             options.IsHosted = true;
 
@@ -74,8 +96,15 @@ internal static class HostingRuntimeExtensions
             {
                 var config = NativeMethods.HttpGetApplicationProperties();
 
-                options.ApplicationPhysicalPath = config.pwzFullApplicationPath;
-                options.ApplicationVirtualPath = config.pwzVirtualApplicationPath;
+                if (options.ApplicationPhysicalPath == AppContext.BaseDirectory)
+                {
+                    options.ApplicationPhysicalPath = config.pwzFullApplicationPath;
+                }
+
+                if (options.ApplicationVirtualPath == "/")
+                {
+                    options.ApplicationVirtualPath = config.pwzVirtualApplicationPath;
+                }
             }
         }
     }

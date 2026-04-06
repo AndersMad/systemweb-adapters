@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Web;
+using System.Web.Hosting;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SystemWebAdapters.Features;
 using Moq;
@@ -24,7 +25,7 @@ public class HttpRequestAdapterFeatureTests
         var other = new Mock<IHttpRequestFeature>();
         other.Setup(o => o.Body).Returns(stream.Object);
 
-        using var feature = new HttpRequestInputStreamFeature(other.Object);
+        using var feature = CreateFeature(other.Object);
         var adapterFeature = (IHttpRequestInputStreamFeature)feature;
 
         // Assert/Act
@@ -43,7 +44,7 @@ public class HttpRequestAdapterFeatureTests
         var other = new Mock<IHttpRequestFeature>();
         other.Setup(o => o.Body).Returns(stream);
 
-        using var feature = new HttpRequestInputStreamFeature(other.Object);
+        using var feature = CreateFeature(other.Object);
 
         var adapterFeature = (IHttpRequestInputStreamFeature)feature;
         await adapterFeature.BufferInputStreamAsync(default);
@@ -71,7 +72,7 @@ public class HttpRequestAdapterFeatureTests
         var other = new Mock<IHttpRequestFeature>();
         other.Setup(o => o.Body).Returns(stream);
 
-        using var feature = new HttpRequestInputStreamFeature(other.Object);
+        using var feature = CreateFeature(other.Object);
         var adapterFeature = (IHttpRequestInputStreamFeature)feature;
 
         // Act
@@ -95,7 +96,7 @@ public class HttpRequestAdapterFeatureTests
         var other = new Mock<IHttpRequestFeature>();
         other.Setup(o => o.Body).Returns(stream);
 
-        using var feature = new HttpRequestInputStreamFeature(other.Object);
+        using var feature = CreateFeature(other.Object);
         var adapterFeature = (IHttpRequestInputStreamFeature)feature;
 
         // Act
@@ -114,5 +115,11 @@ public class HttpRequestAdapterFeatureTests
         public override bool CanSeek { get; }
 
         public override long Length => throw new InvalidOperationException();
+    }
+
+    private static HttpRequestInputStreamFeature CreateFeature(IHttpRequestFeature other)
+    {
+        var mapPathUtility = new Mock<IMapPathUtility>();
+        return new HttpRequestInputStreamFeature(other, mapPathUtility.Object);
     }
 }

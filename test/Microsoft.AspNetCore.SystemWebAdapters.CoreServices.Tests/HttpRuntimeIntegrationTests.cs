@@ -115,4 +115,50 @@ public class HttpRuntimeIntegrationTests
         Assert.Equal(IIS_APPLICATION_ID, options.ApplicationID);
         Assert.True(options.IsHosted);
     }
+
+    [Fact]
+    public async Task ExplicitConfigurationWinsOverIISValues()
+    {
+        const string configuredPath = "CONFIGURED_PATH";
+        const string configuredVirtualPath = "/configured";
+        const string configuredId = "CONFIGURED_ID";
+        const string configuredSite = "CONFIGURED_SITE";
+
+        var builder = WebApplication.CreateBuilder();
+
+        builder.WebHost.UseTestServer();
+        builder.Services.Configure<SystemWebAdaptersOptions>(options =>
+        {
+            options.ApplicationPhysicalPath = configuredPath;
+            options.ApplicationVirtualPath = configuredVirtualPath;
+            options.ApplicationID = configuredId;
+            options.SiteName = configuredSite;
+        });
+        builder.Services.AddSystemWebAdapters();
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            [IIS_VERSION] = "10.0",
+            [IIS_SITE_ID] = "1",
+            [IIS_APP_POOL_ID] = IIS_APP_POOL_ID,
+            [IIS_APP_POOL_CONFIG_FILE] = IIS_APP_POOL_CONFIG_FILE,
+            [IIS_APP_CONFIG_PATH] = IIS_APP_CONFIG_PATH,
+            [IIS_PHYSICAL_PATH] = IIS_PHYSICAL_PATH,
+            [IIS_APPLICATION_VIRTUAL_PATH] = IIS_APPLICATION_VIRTUAL_PATH,
+            [IIS_APPLICATION_ID] = IIS_APPLICATION_ID,
+            [IIS_SITE_NAME] = IIS_SITE_NAME,
+        });
+
+        using var app = builder.Build();
+
+        await app.StartAsync();
+
+        var options = app.Services.GetRequiredService<IOptions<SystemWebAdaptersOptions>>().Value;
+
+        Assert.Equal(configuredPath, options.AppDomainAppPath);
+        Assert.Equal(configuredPath, options.ApplicationPhysicalPath);
+        Assert.Equal(configuredVirtualPath, options.AppDomainAppVirtualPath);
+        Assert.Equal(configuredVirtualPath, options.ApplicationVirtualPath);
+        Assert.Equal(configuredId, options.ApplicationID);
+        Assert.Equal(configuredSite, options.SiteName);
+    }
 }

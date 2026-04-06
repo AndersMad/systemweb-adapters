@@ -2,10 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Xunit;
@@ -109,6 +112,28 @@ public class HttpContextIntegrationTests
             Assert.Equal(timestamp, context.AsSystemWeb().Timestamp);
         });
 
+    [Fact]
+    public Task PhysicalPath()
+        => RunTest("/some/path", context =>
+        {
+            var adapter = context.Request.AsSystemWeb();
+            var root = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"C:\app" : "/app";
+
+            Assert.Equal(Path.Join(root, "some", "path"), adapter.PhysicalPath);
+        });
+
+    [Fact]
+    public Task PhysicalPathUsesCurrentExecutionFilePath()
+        => RunTest("/", context =>
+        {
+            var adapter = context.AsSystemWeb();
+            var root = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"C:\app" : "/app";
+
+            adapter.RewritePath("/some/path", "/pathInfo", "q=1");
+
+            Assert.Equal(Path.Join(root, "some", "path"), adapter.Request.PhysicalPath);
+        });
+
     private static async Task RunTest(string path, Action<HttpContextCore> run)
     {
         // Arrange
@@ -122,6 +147,11 @@ public class HttpContextIntegrationTests
                         services.AddSingleton<TimeProvider>(new MockTimeProvider());
                         services.AddRouting();
                         services.AddSystemWebAdapters();
+                        services.Configure<SystemWebAdaptersOptions>(options =>
+                        {
+                            options.AppDomainAppPath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"C:\app" : "/app";
+                            options.ApplicationPhysicalPath = options.AppDomainAppPath;
+                        });
                     })
                     .Configure(app =>
                     {

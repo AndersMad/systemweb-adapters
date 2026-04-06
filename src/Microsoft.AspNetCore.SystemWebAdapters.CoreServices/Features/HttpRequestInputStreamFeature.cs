@@ -8,6 +8,7 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using System.Web.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.WebUtilities;
@@ -17,6 +18,7 @@ namespace Microsoft.AspNetCore.SystemWebAdapters.Features;
 internal class HttpRequestInputStreamFeature : IHttpRequestInputStreamFeature, IHttpRequestPathFeature, IHttpRequestFeature, IRequestBodyPipeFeature, IDisposable
 {
     private readonly IHttpRequestFeature _other;
+    private readonly IMapPathUtility _mapPathUtility;
 
     private PipeReader? _pipeReader;
     private Stream? _bufferedStream;
@@ -24,10 +26,11 @@ internal class HttpRequestInputStreamFeature : IHttpRequestInputStreamFeature, I
     private string? _pathInfo;
     private string? _filePath;
 
-    public HttpRequestInputStreamFeature(IHttpRequestFeature other)
+    public HttpRequestInputStreamFeature(IHttpRequestFeature other, IMapPathUtility mapPathUtility)
     {
         BufferThreshold = PreBufferRequestStreamAttribute.DefaultBufferThreshold;
         _other = other;
+        _mapPathUtility = mapPathUtility;
     }
 
     public ReadEntityBodyMode Mode { get; private set; }
@@ -217,7 +220,16 @@ internal class HttpRequestInputStreamFeature : IHttpRequestInputStreamFeature, I
 
     string IHttpRequestPathFeature.CurrentExecutionFilePath => _filePath ?? Path;
 
-    string? IHttpRequestPathFeature.PhysicalPath => null;
+    string? IHttpRequestPathFeature.PhysicalPath
+    {
+        get
+        {
+            var currentExecutionFilePath = _filePath ?? Path;
+            return string.IsNullOrEmpty(currentExecutionFilePath)
+                ? null
+                : _mapPathUtility.MapPath("/", currentExecutionFilePath);
+        }
+    }
 
     internal static class AspNetCoreTempDirectory
     {
