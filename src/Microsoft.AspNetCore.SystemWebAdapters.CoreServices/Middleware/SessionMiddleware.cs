@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SystemWebAdapters.Features;
 using Microsoft.AspNetCore.SystemWebAdapters.SessionState;
+using Microsoft.AspNetCore.SystemWebAdapters.SessionState.Wrapped;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -23,6 +24,12 @@ internal partial class SessionLoadMiddleware
 
     [LoggerMessage(EventId = 1, Level = LogLevel.Warning, Message = "Creating session on demand by synchronously waiting on a potential asynchronous connection")]
     private partial void LogOnDemand();
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Warning, Message = "Skipping session state initialization for {Behavior} because no ISessionManager is registered")]
+    private partial void LogMissingSessionManager(SessionStateBehavior behavior);
+
+    [LoggerMessage(EventId = 3, Level = LogLevel.Warning, Message = "Skipping wrapped ASP.NET Core session initialization for {Behavior} because ASP.NET Core session middleware is not configured")]
+    private partial void LogMissingAspNetCoreSession(SessionStateBehavior behavior);
 
     private readonly TimeSpan CommitTimeout = TimeSpan.FromMinutes(1);
 
@@ -41,8 +48,22 @@ internal partial class SessionLoadMiddleware
     {
         LogMessage(feature.Behavior);
 
-        var manager = context.RequestServices.GetRequiredService<ISessionManager>();
         var details = new SessionAttribute { SessionBehavior = feature.Behavior, IsPreLoad = feature.IsPreLoad };
+        var manager = context.RequestServices.GetService<ISessionManager>();
+
+        if (manager is null)
+        {
+            LogMissingSessionManager(feature.Behavior);
+            await _next(context);
+            return;
+        }
+
+        if (manager is AspNetCoreSessionManager && context.Features.Get<ISessionFeature>() is null)
+        {
+            LogMissingAspNetCoreSession(feature.Behavior);
+            await _next(context);
+            return;
+        }
 
         using var state = !feature.IsPreLoad
 #pragma warning disable CA2000 // False positive for CA2000 here

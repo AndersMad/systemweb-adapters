@@ -53,6 +53,20 @@ public class SessionIntegrationTests
         Assert.Equal(expected, actual);
     }
 
+    [Fact]
+    public async Task RequiredSessionWithoutSessionManagerDoesNotThrow()
+    {
+        var actual = await GetAsync("/required", addWrappedSession: false, useSessionMiddleware: false);
+        Assert.Equal("Session:null", actual);
+    }
+
+    [Fact]
+    public async Task RequiredSessionWithoutAspNetCoreSessionMiddlewareDoesNotThrow()
+    {
+        var actual = await GetAsync("/required", addWrappedSession: true, useSessionMiddleware: false);
+        Assert.Equal("Session:null", actual);
+    }
+
     [InlineData(true)]
     [InlineData(false)]
     [Theory]
@@ -131,7 +145,7 @@ public class SessionIntegrationTests
         }
     }
 
-    private static async Task<string> GetAsync(string endpoint)
+    private static async Task<string> GetAsync(string endpoint, bool addWrappedSession = true, bool useSessionMiddleware = true)
     {
         using var host = await new HostBuilder()
           .ConfigureWebHost(webBuilder =>
@@ -145,9 +159,12 @@ public class SessionIntegrationTests
                   {
                       services.AddRouting();
                       services.AddControllers();
-                      services.AddSystemWebAdapters()
-                        .AddWrappedAspNetCoreSession();
-                      services.AddDistributedMemoryCache();
+                      var adapters = services.AddSystemWebAdapters();
+                      if (addWrappedSession)
+                      {
+                          adapters.AddWrappedAspNetCoreSession();
+                          services.AddDistributedMemoryCache();
+                      }
                   })
                   .Configure(app =>
                   {
@@ -157,7 +174,10 @@ public class SessionIntegrationTests
                           SetOverrideSessionBehavior(ctx);
                           return next(ctx);
                       });
-                      app.UseSession();
+                      if (useSessionMiddleware)
+                      {
+                          app.UseSession();
+                      }
                       app.UseSystemWebAdapters();
                       app.UseEndpoints(endpoints =>
                       {
