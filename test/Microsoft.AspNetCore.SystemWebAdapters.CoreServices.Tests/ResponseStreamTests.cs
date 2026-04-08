@@ -166,6 +166,27 @@ public class ResponseStreamTests
     }
 
     [Fact]
+    public async Task SwitchWriterCapturesOutputUntilRestored()
+    {
+        StringWriter? captured = null;
+
+        var result = await RunAsync(context =>
+        {
+            captured = new StringWriter();
+
+            var original = context.Response.SwitchWriter(captured);
+
+            context.Response.Write("hidden");
+            context.Response.SwitchWriter(original!);
+            context.Response.Write("visible");
+        });
+
+        Assert.NotNull(captured);
+        Assert.Equal("hidden", captured.ToString());
+        Assert.Equal("visible", result);
+    }
+
+    [Fact]
     public async Task ClearContent()
     {
         var result = await RunAsync(context =>

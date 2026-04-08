@@ -197,6 +197,13 @@ namespace System.Web
             set => _writer = value;
         }
 
+        internal TextWriter? SwitchWriter(TextWriter? writer)
+        {
+            var previous = _writer;
+            _writer = writer;
+            return previous;
+        }
+
         public bool IsClientConnected => !Response.HttpContext.RequestAborted.IsCancellationRequested;
 
         public void AddHeader(string name, string value) => AppendHeader(name, value);

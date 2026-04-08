@@ -59,6 +59,8 @@ namespace System.Web
             set => _response.Output = value;
         }
 
+        internal override TextWriter? SwitchWriter(TextWriter? writer) => _response.SwitchWriter(writer);
+
         public override bool BufferOutput
         {
             get => _response.BufferOutput;

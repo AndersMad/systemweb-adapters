@@ -94,6 +94,8 @@ namespace System.Web
             set => throw new NotImplementedException();
         }
 
+        internal virtual TextWriter? SwitchWriter(TextWriter? writer) => throw new NotImplementedException();
+
         [AllowNull]
         public virtual Stream Filter
         {
