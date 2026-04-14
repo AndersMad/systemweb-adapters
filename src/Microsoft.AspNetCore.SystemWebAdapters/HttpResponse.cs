@@ -26,11 +26,14 @@ namespace System.Web
     {
         private const string NoContentTypeMessage = "No content type declared";
 
+        private bool _isRequestBeingRedirected;
         private NameValueCollection? _headers;
         private ResponseHeaders? _typedHeaders;
         private TextWriter? _writer;
         private HttpCookieCollection? _cookies;
         private HttpCachePolicy? _cache;
+
+        public static event EventHandler? Redirecting;
 
         internal HttpResponse(HttpResponseCore response)
         {
@@ -62,6 +65,7 @@ namespace System.Web
         {
             Response.Headers.Clear();
             _cookies?.Clear();
+            _isRequestBeingRedirected = false;
 
             StatusCode = 200;
             SubStatusCode = 0;
@@ -231,7 +235,11 @@ namespace System.Web
             set => Response.Headers.Location = value;
         }
 
-        public bool IsRequestBeingRedirected => StatusCode is >= 300 and < 400;
+        public bool IsRequestBeingRedirected
+        {
+            get => _isRequestBeingRedirected || StatusCode is >= 300 and < 400;
+            set => _isRequestBeingRedirected = value;
+        }
 
         [SuppressMessage("Design", "CA1054:URI parameters should not be strings", Justification = Constants.ApiFromAspNet)]
         public void Redirect(string url) => Redirect(url, endResponse: true, permanent: false);
@@ -251,6 +259,7 @@ namespace System.Web
 
             var resolved = ResolvePath(url);
             Response.Redirect(resolved, permanent);
+            IsRequestBeingRedirected = true;
 
             ContentType = "text/html";
 
@@ -259,6 +268,8 @@ namespace System.Web
             Output.Write(resolved);
             Output.WriteLine("\">here</a>.</h2>");
             Output.WriteLine("</body></html>");
+
+            Redirecting?.Invoke(this, EventArgs.Empty);
 
             if (endResponse)
             {
