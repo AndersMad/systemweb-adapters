@@ -38,6 +38,22 @@ public class ResponseHeaderTests
     }
 
     [Fact]
+    public async Task SetCookieIsVisibleFromRequestInSameRequest()
+    {
+        string? requestCookieValue = null;
+
+        using var result = await RunAsync(context =>
+        {
+            var cookie = new HttpCookie("test", ContentValue);
+            context.Response.Cookies.Set(cookie);
+            requestCookieValue = context.Request.Cookies["test"]?.Value;
+        });
+
+        Assert.Equal(ContentValue, requestCookieValue);
+        Assert.Equal($"test={ContentValue}; path=/; samesite=lax", result.Headers.GetValues(HeaderNames.SetCookie).First());
+    }
+
+    [Fact]
     public async Task SetMultipleCookie()
     {
         // Arrange

@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SystemWebAdapters;
+using Microsoft.AspNetCore.SystemWebAdapters.Internal;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 
@@ -13,6 +14,8 @@ namespace System.Web;
 [Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1010:Generic interface should also be implemented", Justification = Constants.ApiFromAspNet)]
 public sealed class HttpCookieCollection : NameObjectCollectionBase
 {
+    private readonly HttpResponse? _response;
+
     public HttpCookieCollection()
     {
     }
@@ -29,6 +32,8 @@ public sealed class HttpCookieCollection : NameObjectCollectionBase
 
     internal HttpCookieCollection(HttpResponse response)
     {
+        _response = response;
+
         response.AsAspNetCore().OnStarting(static state =>
         {
             var response = (HttpResponse)state;
@@ -78,6 +83,7 @@ public sealed class HttpCookieCollection : NameObjectCollectionBase
         ArgumentNullException.ThrowIfNull(cookie);
 
         BaseAdd(cookie.Name, cookie);
+        SyncRequestCookie(cookie);
     }
 
     public void Set(HttpCookie cookie)
@@ -85,6 +91,7 @@ public sealed class HttpCookieCollection : NameObjectCollectionBase
         ArgumentNullException.ThrowIfNull(cookie);
 
         BaseSet(cookie.Name, cookie);
+        SyncRequestCookie(cookie);
     }
 
     public HttpCookie? Get(string name) => (HttpCookie?)BaseGet(name);
@@ -96,4 +103,39 @@ public sealed class HttpCookieCollection : NameObjectCollectionBase
     public void Remove(string name) => BaseRemove(name);
 
     public void Clear() => BaseClear();
+
+    private void SyncRequestCookie(HttpCookie cookie)
+    {
+        if (_response is null)
+        {
+            return;
+        }
+
+        _response.Response.HttpContext.AsSystemWeb().Request.Cookies.Set(Clone(cookie));
+    }
+
+    private static HttpCookie Clone(HttpCookie source)
+    {
+        var clone = new HttpCookie(source.Name)
+        {
+            Domain = source.Domain,
+            Expires = source.Expires,
+            HttpOnly = source.HttpOnly,
+            Path = source.Path,
+            SameSite = source.SameSite,
+            Secure = source.Secure,
+            Shareable = source.Shareable,
+        };
+
+        if (source.HasKeys)
+        {
+            source.CopyTo((HttpValueCollection)clone.Values);
+        }
+        else
+        {
+            clone.Value = source.Value;
+        }
+
+        return clone;
+    }
 }
