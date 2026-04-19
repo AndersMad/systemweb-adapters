@@ -119,7 +119,7 @@ namespace System.Web
 
         public NameValueCollection Form => _form ??= Request.HasFormContentType ? Request.Form.ToNameValueCollection() : StringValuesReadOnlyDictionaryNameValueCollection.Empty;
 
-        public HttpCookieCollection Cookies => _cookies ??= new(Request.Cookies);
+        public HttpCookieCollection Cookies => _cookies ??= CreateCookiesCollection();
 
         public HttpFileCollection Files => _files ??= Request.HasFormContentType ? new(Request.Form.Files) : HttpFileCollection.Empty;
 
@@ -216,7 +216,7 @@ namespace System.Web
 
         public string? this[string key] => Params[key];
 
-        public NameValueCollection Params => _params ??= new ParamsCollection(Request);
+        public NameValueCollection Params => _params ??= new ParamsCollection(this);
 
         public byte[] BinaryRead(int count)
         {
@@ -294,6 +294,46 @@ namespace System.Web
         }
 
         public void Abort() => Request.HttpContext.Abort();
+
+        internal void AddResponseCookie(HttpCookie cookie)
+        {
+            if (_cookies is not null)
+            {
+                _cookies.AddCookie(cookie, append: true);
+            }
+        }
+
+        internal void ResetCookies()
+        {
+            if (_cookies is not null)
+            {
+                _cookies.Reset();
+
+                foreach (var (name, value) in Request.Cookies)
+                {
+#pragma warning disable CA5396
+                    _cookies.AddCookie(new HttpCookie(name, value), append: true);
+#pragma warning restore CA5396
+                }
+
+                if (Request.HttpContext.AsSystemWeb().Response.ExistingCookies is { } responseCookies)
+                {
+                    _cookies.Append(responseCookies);
+                }
+            }
+        }
+
+        private HttpCookieCollection CreateCookiesCollection()
+        {
+            var cookies = new HttpCookieCollection(Request.Cookies);
+
+            if (Request.HttpContext.AsSystemWeb().Response.ExistingCookies is { } responseCookies)
+            {
+                cookies.Append(responseCookies);
+            }
+
+            return cookies;
+        }
 
         [return: NotNullIfNotNull(nameof(request))]
         public static implicit operator HttpRequest?(HttpRequestCore? request) => request?.HttpContext.AsSystemWeb().Request;

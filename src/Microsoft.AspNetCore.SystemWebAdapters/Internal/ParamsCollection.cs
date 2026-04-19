@@ -1,4 +1,5 @@
 using System;
+using System.Web;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Primitives;
 
@@ -6,9 +7,9 @@ namespace Microsoft.AspNetCore.SystemWebAdapters.Internal;
 
 internal class ParamsCollection : NoGetByIntNameValueCollection
 {
-    private readonly HttpRequestCore _request;
+    private readonly HttpRequest _request;
 
-    public ParamsCollection(HttpRequestCore request)
+    public ParamsCollection(HttpRequest request)
     {
         _request = request;
 
@@ -30,22 +31,22 @@ internal class ParamsCollection : NoGetByIntNameValueCollection
             return StringValues.Empty;
         }
 
-        if (_request.Query.TryGetValue(key, out var query))
+        if (_request.Request.Query.TryGetValue(key, out var query))
         {
             return query;
         }
 
-        if (_request.HasFormContentType && _request.Form.TryGetValue(key, out var form))
+        if (_request.Request.HasFormContentType && _request.Request.Form.TryGetValue(key, out var form))
         {
             return form;
         }
 
-        if (_request.Cookies.TryGetValue(key, out var cookie))
+        if (_request.Cookies[key]?.Value is { } cookie)
         {
             return cookie;
         }
 
-        if (_request.HttpContext.Features.Get<IServerVariablesFeature>() is { } serverVariables && serverVariables[key] is { } server)
+        if (_request.Request.HttpContext.Features.Get<IServerVariablesFeature>() is { } serverVariables && serverVariables[key] is { } server)
         {
             return server;
         }

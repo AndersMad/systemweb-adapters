@@ -42,6 +42,8 @@ namespace System.Web
 
         internal HttpResponseCore Response { get; }
 
+        internal HttpCookieCollection? ExistingCookies => _cookies;
+
         internal ResponseHeaders TypedHeaders => _typedHeaders ??= new(Response.Headers);
 
         public int StatusCode
@@ -321,6 +323,18 @@ namespace System.Web
         }
 
         public void SetCookie(HttpCookie cookie) => Cookies.Set(cookie);
+
+        internal void BeforeCookieCollectionChange()
+        {
+            if (HeadersWritten)
+            {
+                throw new HttpException("Cannot modify cookies after headers have been sent.");
+            }
+        }
+
+        internal void OnCookieAdd(HttpCookie cookie) => Response.HttpContext.AsSystemWeb().Request.AddResponseCookie(cookie);
+
+        internal void OnCookieCollectionChange() => Response.HttpContext.AsSystemWeb().Request.ResetCookies();
 
         public void Flush() => Response.Body.Flush();
 

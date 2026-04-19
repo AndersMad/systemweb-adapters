@@ -41,16 +41,54 @@ public class ResponseHeaderTests
     public async Task SetCookieIsVisibleFromRequestInSameRequest()
     {
         string? requestCookieValue = null;
+        string? requestParamValue = null;
 
         using var result = await RunAsync(context =>
         {
             var cookie = new HttpCookie("test", ContentValue);
             context.Response.Cookies.Set(cookie);
             requestCookieValue = context.Request.Cookies["test"]?.Value;
+            requestParamValue = context.Request["test"];
+        });
+
+        Assert.Equal(ContentValue, requestCookieValue);
+        Assert.Equal(ContentValue, requestParamValue);
+        Assert.Equal($"test={ContentValue}; path=/; samesite=lax", result.Headers.GetValues(HeaderNames.SetCookie).First());
+    }
+
+    [Fact]
+    public async Task ResponseCookieIndexerCreatesCookieOnDemand()
+    {
+        string? requestCookieValue = null;
+
+        using var result = await RunAsync(context =>
+        {
+            var cookie = context.Response.Cookies["test"];
+            cookie!.Value = ContentValue;
+            requestCookieValue = context.Request.Cookies["test"]?.Value;
         });
 
         Assert.Equal(ContentValue, requestCookieValue);
         Assert.Equal($"test={ContentValue}; path=/; samesite=lax", result.Headers.GetValues(HeaderNames.SetCookie).First());
+    }
+
+    [Fact]
+    public async Task RemoveResponseCookieRemovesRequestVisibilityInSameRequest()
+    {
+        string? requestCookieValue = null;
+        string? requestParamValue = null;
+
+        using var result = await RunAsync(context =>
+        {
+            context.Response.Cookies["test"]!.Value = ContentValue;
+            context.Response.Cookies.Remove("test");
+            requestCookieValue = context.Request.Cookies["test"]?.Value;
+            requestParamValue = context.Request["test"];
+        });
+
+        Assert.Null(requestCookieValue);
+        Assert.Null(requestParamValue);
+        Assert.False(result.Headers.TryGetValues(HeaderNames.SetCookie, out _));
     }
 
     [Fact]

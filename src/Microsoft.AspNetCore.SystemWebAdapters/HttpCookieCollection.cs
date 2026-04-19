@@ -5,7 +5,6 @@ using System.Collections.Specialized;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SystemWebAdapters;
-using Microsoft.AspNetCore.SystemWebAdapters.Internal;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 
@@ -82,60 +81,71 @@ public sealed class HttpCookieCollection : NameObjectCollectionBase
     {
         ArgumentNullException.ThrowIfNull(cookie);
 
-        BaseAdd(cookie.Name, cookie);
-        SyncRequestCookie(cookie);
+        _response?.BeforeCookieCollectionChange();
+        AddCookie(cookie, append: true);
+        _response?.OnCookieAdd(cookie);
     }
 
     public void Set(HttpCookie cookie)
     {
         ArgumentNullException.ThrowIfNull(cookie);
 
-        BaseSet(cookie.Name, cookie);
-        SyncRequestCookie(cookie);
+        _response?.BeforeCookieCollectionChange();
+        AddCookie(cookie, append: false);
+        _response?.OnCookieCollectionChange();
     }
 
-    public HttpCookie? Get(string name) => (HttpCookie?)BaseGet(name);
+    public HttpCookie? Get(string name)
+    {
+        var cookie = (HttpCookie?)BaseGet(name);
+
+        if (cookie is null && _response is not null)
+        {
+            cookie = new HttpCookie(name);
+            AddCookie(cookie, append: true);
+            _response.OnCookieAdd(cookie);
+        }
+
+        return cookie;
+    }
 
     public HttpCookie? Get(int index) => (HttpCookie?)BaseGet(index);
 
     public string? GetKey(int index) => BaseGetKey(index);
 
-    public void Remove(string name) => BaseRemove(name);
-
-    public void Clear() => BaseClear();
-
-    private void SyncRequestCookie(HttpCookie cookie)
+    public void Remove(string name)
     {
-        if (_response is null)
-        {
-            return;
-        }
-
-        _response.Response.HttpContext.AsSystemWeb().Request.Cookies.Set(Clone(cookie));
+        _response?.BeforeCookieCollectionChange();
+        RemoveCookie(name);
+        _response?.OnCookieCollectionChange();
     }
 
-    private static HttpCookie Clone(HttpCookie source)
-    {
-        var clone = new HttpCookie(source.Name)
-        {
-            Domain = source.Domain,
-            Expires = source.Expires,
-            HttpOnly = source.HttpOnly,
-            Path = source.Path,
-            SameSite = source.SameSite,
-            Secure = source.Secure,
-            Shareable = source.Shareable,
-        };
+    public void Clear() => Reset();
 
-        if (source.HasKeys)
+    internal void AddCookie(HttpCookie cookie, bool append)
+    {
+        if (append)
         {
-            source.CopyTo((HttpValueCollection)clone.Values);
+            BaseAdd(cookie.Name, cookie);
         }
         else
         {
-            clone.Value = source.Value;
+            BaseSet(cookie.Name, cookie);
         }
-
-        return clone;
     }
+
+    internal void Append(HttpCookieCollection cookies)
+    {
+        for (var i = 0; i < cookies.Count; i++)
+        {
+            if (cookies.BaseGet(i) is HttpCookie cookie)
+            {
+                BaseAdd(cookie.Name, cookie);
+            }
+        }
+    }
+
+    internal void RemoveCookie(string name) => BaseRemove(name);
+
+    internal void Reset() => BaseClear();
 }
