@@ -495,10 +495,13 @@ namespace Microsoft.AspNetCore.SystemWebAdapters
 
         [InlineData("path1", "/path1", null)]
         [InlineData("/path1", "/path1", null)]
+        [InlineData("~/path1", "/path1", null)]
         [InlineData("path1?", "/path1", "")]
         [InlineData("/path1?", "/path1", "")]
+        [InlineData("~/path1?", "/path1", "")]
         [InlineData("path1?q=1", "/path1", "?q=1")]
         [InlineData("/path1?q=1", "/path1", "?q=1")]
+        [InlineData("~/path1?q=1", "/path1", "?q=1")]
         [InlineData("/path1 ?q=1", "/path1", "?q=1")]
         [Theory]
         public void RewritePath(string rewritePath, string finalPath, string? finalQuery)
@@ -520,14 +523,20 @@ namespace Microsoft.AspNetCore.SystemWebAdapters
         [InlineData("path1", "/path1", null, false)]
         [InlineData("/path1", "/path1", null, true)]
         [InlineData("/path1", "/path1", null, false)]
+        [InlineData("~/path1", "/path1", null, true)]
+        [InlineData("~/path1", "/path1", null, false)]
         [InlineData("path1?", "/path1", "", true)]
         [InlineData("path1?", "/path1", "", false)]
         [InlineData("/path1?", "/path1", "", true)]
         [InlineData("/path1?", "/path1", "", false)]
+        [InlineData("~/path1?", "/path1", "", true)]
+        [InlineData("~/path1?", "/path1", "", false)]
         [InlineData("path1?q=1", "/path1", "?q=1", true)]
         [InlineData("path1?q=1", "/path1", "?q=1", false)]
         [InlineData("/path1?q=1", "/path1", "?q=1", true)]
         [InlineData("/path1?q=1", "/path1", "?q=1", false)]
+        [InlineData("~/path1?q=1", "/path1", "?q=1", true)]
+        [InlineData("~/path1?q=1", "/path1", "?q=1", false)]
         [InlineData("/path1 ?q=1", "/path1", "?q=1", true)]
         [InlineData("/path1 ?q=1", "/path1", "?q=1", false)]
         [Theory]
@@ -560,12 +569,45 @@ namespace Microsoft.AspNetCore.SystemWebAdapters
             var filePath = _fixture.Create<string>();
             var pathInfo = _fixture.Create<string>();
             var query = _fixture.Create<string>();
+            var expectedFilePath = filePath.StartsWith("/", StringComparison.Ordinal) ? filePath : "/" + filePath;
 
             // Act
             context.RewritePath(filePath, pathInfo, query, rebase);
 
             // Assert
-            feature.Verify(f => f.Rewrite(filePath, pathInfo, query, rebase), Times.Once);
+            feature.Verify(f => f.Rewrite(expectedFilePath, pathInfo, query, rebase), Times.Once);
+        }
+
+        [InlineData("~/some/path", "/some/path", true)]
+        [InlineData("~/some/path", "/some/path", false)]
+        [InlineData("/some/path", "/some/path", true)]
+        [InlineData("/some/path", "/some/path", false)]
+        [Theory]
+        public void RewritePathWithPathInfoNormalizesAppRelativeFilePath(string filePath, string expectedFilePath, bool rebase)
+        {
+            // Arrange
+            var coreContext = new DefaultHttpContext();
+            var feature = new Mock<IHttpRequestPathFeature>();
+            coreContext.Features.Set(feature.Object);
+
+            var services = new ServiceCollection();
+            services.AddOptions();
+            services.Configure<SystemWebAdaptersOptions>(options =>
+            {
+                options.AppDomainAppVirtualPath = "/";
+            });
+            services.AddSingleton<VirtualPathUtilityImpl>();
+            coreContext.RequestServices = services.BuildServiceProvider();
+
+            var context = new HttpContext(coreContext);
+            const string pathInfo = "/pathInfo";
+            const string query = "q=1";
+
+            // Act
+            context.RewritePath(filePath, pathInfo, query, rebase);
+
+            // Assert
+            feature.Verify(f => f.Rewrite(expectedFilePath, pathInfo, query, rebase), Times.Once);
         }
 
         [Fact]

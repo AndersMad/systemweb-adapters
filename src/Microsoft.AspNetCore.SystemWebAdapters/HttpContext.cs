@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.SystemWebAdapters.Features;
 using Microsoft.AspNetCore.SystemWebAdapters.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace System.Web;
 
@@ -168,19 +169,20 @@ public class HttpContext : IServiceProvider
             path = path[..iqs];
         }
 
-        if (!path.StartsWith('/'))
-        {
-            path = "/" + path;
-        }
+        path = NormalizeRewriteFilePath(path.Trim());
 
-        RewritePath(path.Trim(), string.Empty, qs, rebaseClientPath);
+        RewritePath(path, string.Empty, qs, rebaseClientPath);
     }
 
     public void RewritePath(string filePath, string pathInfo, string? queryString)
         => RewritePath(filePath, pathInfo, queryString, false);
 
     public void RewritePath(string filePath, string pathInfo, string? queryString, bool setClientFilePath)
-        => Context.Features.GetRequiredFeature<IHttpRequestPathFeature>().Rewrite(filePath, pathInfo, queryString, setClientFilePath);
+    {
+        ArgumentNullException.ThrowIfNull(filePath);
+
+        Context.Features.GetRequiredFeature<IHttpRequestPathFeature>().Rewrite(NormalizeRewriteFilePath(filePath), pathInfo, queryString, setClientFilePath);
+    }
 
     [SuppressMessage("Design", "CA1033:Interface methods should be callable by child types", Justification = Constants.ApiFromAspNet)]
     object? IServiceProvider.GetService(Type service)
@@ -210,6 +212,20 @@ public class HttpContext : IServiceProvider
         var token = new DisposeOnPipelineSubscriptionToken(target);
         Context.Response.RegisterForDispose(token);
         return token;
+    }
+
+    private string NormalizeRewriteFilePath(string filePath)
+    {
+        if (VirtualPathUtility.IsAppRelative(filePath))
+        {
+            var applicationPath = Context.RequestServices?.GetService<IOptions<SystemWebAdaptersOptions>>()?.Value.AppDomainAppVirtualPath ?? "/";
+            var utility = Context.RequestServices?.GetService<VirtualPathUtilityImpl>()
+                ?? new VirtualPathUtilityImpl(Options.Create(new SystemWebAdaptersOptions { AppDomainAppVirtualPath = applicationPath }));
+
+            return utility.ToAbsolute(filePath, applicationPath);
+        }
+
+        return filePath.StartsWith('/') ? filePath : "/" + filePath;
     }
 
     [return: NotNullIfNotNull(nameof(context))]

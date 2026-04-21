@@ -80,6 +80,29 @@ public class HttpContextIntegrationTests
         });
 
     [Fact]
+    public Task RewriteRequestPathInfoAppRelative()
+        => RunTest("/", context =>
+        {
+            var adapter = context.AsSystemWeb();
+
+            adapter.RewritePath("~/some/path", "/pathInfo", "q=1");
+
+            Assert.Equal("/some/path/pathInfo", context.Request.Path);
+            Assert.Collection(context.Request.Query,
+                q =>
+                {
+                    Assert.Equal("q", q.Key);
+                    Assert.Equal("1", q.Value);
+                });
+
+            Assert.Equal("/pathInfo", adapter.Request.PathInfo);
+            Assert.Equal("/some/path", adapter.Request.FilePath);
+            Assert.Equal("/some/path/pathInfo", adapter.Request.Path);
+            Assert.Single(adapter.Request.QueryString);
+            Assert.Equal("1", adapter.Request.QueryString["q"]);
+        });
+
+    [Fact]
     public Task RewritePathViaCoreApis()
         => RunTest("/", context =>
         {
