@@ -188,6 +188,7 @@ internal class HttpRequestInputStreamFeature : IHttpRequestInputStreamFeature, I
 
     void IHttpRequestPathFeature.Rewrite(string filePath, string pathInfo, string? queryString, bool setClientFilePath)
     {
+        var rawUrl = GetRawUrl();
         _other.QueryString = NormalizeQueryString(queryString);
 
         if (string.IsNullOrEmpty(pathInfo))
@@ -206,6 +207,7 @@ internal class HttpRequestInputStreamFeature : IHttpRequestInputStreamFeature, I
         // This must be set after setting Path as it will reset the PathInfo and FilePath instances
         _pathInfo = pathInfo;
         _filePath = filePath;
+        _other.RawTarget = setClientFilePath ? GetCurrentTarget() : rawUrl;
     }
 
     private static string NormalizeQueryString(string? queryString)
@@ -222,7 +224,23 @@ internal class HttpRequestInputStreamFeature : IHttpRequestInputStreamFeature, I
 
     string IHttpRequestPathFeature.FilePath => _filePath ?? Path;
 
-    string IHttpRequestPathFeature.RawUrl => _other.RawTarget;
+    string IHttpRequestPathFeature.RawUrl => GetRawUrl();
+
+    private string GetRawUrl()
+    {
+        return string.IsNullOrEmpty(_other.RawTarget)
+            ? GetCurrentTarget()
+            : _other.RawTarget;
+    }
+
+    private string GetCurrentTarget()
+    {
+        var pathBase = _other.PathBase ?? string.Empty;
+        var path = _other.Path ?? string.Empty;
+        var queryString = _other.QueryString ?? string.Empty;
+
+        return $"{pathBase}{path}{queryString}";
+    }
 
     string IHttpRequestPathFeature.CurrentExecutionFilePath => _filePath ?? Path;
 

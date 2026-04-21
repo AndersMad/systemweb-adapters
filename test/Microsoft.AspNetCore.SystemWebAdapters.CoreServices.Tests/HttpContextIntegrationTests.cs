@@ -52,6 +52,7 @@ public class HttpContextIntegrationTests
             Assert.Equal("", adapter.Request.PathInfo);
             Assert.Equal("/some/path", adapter.Request.FilePath);
             Assert.Equal("/some/path", adapter.Request.Path);
+            Assert.Equal("/some/path?q=1", adapter.Request.RawUrl);
             Assert.Single(adapter.Request.QueryString);
             Assert.Equal("1", adapter.Request.QueryString["q"]);
         });
@@ -100,8 +101,22 @@ public class HttpContextIntegrationTests
             Assert.Equal("/pathInfo", adapter.Request.PathInfo);
             Assert.Equal("/some/path", adapter.Request.FilePath);
             Assert.Equal("/some/path/pathInfo", adapter.Request.Path);
+            Assert.Equal("/", adapter.Request.RawUrl);
             Assert.Single(adapter.Request.QueryString);
             Assert.Equal("1", adapter.Request.QueryString["q"]);
+        });
+
+    [Fact]
+    public Task RewriteRequestPathInfoPreservesOriginalRawUrl()
+        => RunTest("/friendly?a=b&c=d", context =>
+        {
+            var adapter = context.AsSystemWeb();
+
+            adapter.RewritePath("/rewritten.aspx", string.Empty, "a=b&c=d");
+
+            Assert.Equal("/rewritten.aspx", context.Request.Path);
+            Assert.Equal("?a=b&c=d", context.Request.QueryString.Value);
+            Assert.Equal("/friendly?a=b&c=d", adapter.Request.RawUrl);
         });
 
     [Fact]
