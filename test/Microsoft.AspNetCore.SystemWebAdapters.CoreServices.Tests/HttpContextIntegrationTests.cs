@@ -65,6 +65,7 @@ public class HttpContextIntegrationTests
             adapter.RewritePath("/some/path", "/pathInfo", "q=1");
 
             Assert.Equal("/some/path/pathInfo", context.Request.Path);
+            Assert.Equal("?q=1", context.Request.QueryString.Value);
             Assert.Collection(context.Request.Query,
                 q =>
                 {
@@ -88,6 +89,7 @@ public class HttpContextIntegrationTests
             adapter.RewritePath("~/some/path", "/pathInfo", "q=1");
 
             Assert.Equal("/some/path/pathInfo", context.Request.Path);
+            Assert.Equal("?q=1", context.Request.QueryString.Value);
             Assert.Collection(context.Request.Query,
                 q =>
                 {

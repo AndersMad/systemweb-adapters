@@ -188,7 +188,7 @@ internal class HttpRequestInputStreamFeature : IHttpRequestInputStreamFeature, I
 
     void IHttpRequestPathFeature.Rewrite(string filePath, string pathInfo, string? queryString, bool setClientFilePath)
     {
-        _other.QueryString = queryString ?? string.Empty;
+        _other.QueryString = NormalizeQueryString(queryString);
 
         if (string.IsNullOrEmpty(pathInfo))
         {
@@ -206,6 +206,16 @@ internal class HttpRequestInputStreamFeature : IHttpRequestInputStreamFeature, I
         // This must be set after setting Path as it will reset the PathInfo and FilePath instances
         _pathInfo = pathInfo;
         _filePath = filePath;
+    }
+
+    private static string NormalizeQueryString(string? queryString)
+    {
+        if (string.IsNullOrEmpty(queryString))
+        {
+            return string.Empty;
+        }
+
+        return queryString[0] == '?' ? queryString : "?" + queryString;
     }
 
     string IHttpRequestPathFeature.PathInfo => _pathInfo ?? string.Empty;

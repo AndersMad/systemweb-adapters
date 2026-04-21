@@ -108,6 +108,24 @@ public class HttpRequestAdapterFeatureTests
         Assert.Equal(ReadEntityBodyMode.Buffered, mode);
     }
 
+    [Theory]
+    [InlineData(null, "")]
+    [InlineData("", "")]
+    [InlineData("q=1", "?q=1")]
+    [InlineData("?q=1", "?q=1")]
+    public void RewriteNormalizesQueryString(string? queryString, string expectedQueryString)
+    {
+        // Arrange
+        var other = new HttpRequestFeature();
+        using var feature = CreateFeature(other);
+
+        // Act
+        ((IHttpRequestPathFeature)feature).Rewrite("/some/path", "/pathInfo", queryString, setClientFilePath: false);
+
+        // Assert
+        Assert.Equal(expectedQueryString, ((IHttpRequestFeature)feature).QueryString);
+    }
+
     private sealed class TestStream : MemoryStream
     {
         public TestStream(bool canSeek) => CanSeek = canSeek;
