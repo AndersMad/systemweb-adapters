@@ -899,8 +899,8 @@ namespace Microsoft.AspNetCore.SystemWebAdapters
             var queryCollection2 = request.QueryString;
 
             // Assert
-            Assert.Same(queryCollection1, queryCollection2);
             Assert.IsType<StringValuesReadOnlyDictionaryNameValueCollection>(queryCollection1);
+            Assert.IsType<StringValuesReadOnlyDictionaryNameValueCollection>(queryCollection2);
         }
 
         [Fact]

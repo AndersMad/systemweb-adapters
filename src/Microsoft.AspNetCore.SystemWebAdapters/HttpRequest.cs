@@ -29,7 +29,6 @@ namespace System.Web
         private NameValueCollection? _headers;
         private NameValueCollection? _serverVariables;
         private NameValueCollection? _form;
-        private NameValueCollection? _query;
         private HttpFileCollection? _files;
         private HttpCookieCollection? _cookies;
         private NameValueCollection? _params;
@@ -168,7 +167,7 @@ namespace System.Web
 
         public bool IsSecureConnection => Request.IsHttps;
 
-        public NameValueCollection QueryString => _query ??= Request.Query.ToNameValueCollection();
+        public NameValueCollection QueryString => Request.Query.ToNameValueCollection();
 
         public bool IsLocal
         {

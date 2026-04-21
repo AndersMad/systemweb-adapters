@@ -120,6 +120,24 @@ public class HttpContextIntegrationTests
         });
 
     [Fact]
+    public Task RewriteRequestPathRefreshesCachedQueryString()
+        => RunTest("/friendly?id=12345&returl=%2Fpreview%2Fitem.html%3Fbranch%3Dbranch-under-test", context =>
+        {
+            var adapter = context.AsSystemWeb();
+
+            Assert.Equal("12345", adapter.Request.QueryString["id"]);
+            Assert.Null(adapter.Request.QueryString["formname"]);
+
+            adapter.RewritePath("/internal/base.aspx", string.Empty, "id=12345&returl=%2Fpreview%2Fitem.html%3Fbranch%3Dbranch-under-test&formname=RewrittenForm");
+
+            Assert.Equal("/internal/base.aspx", context.Request.Path.Value);
+            Assert.Equal("?id=12345&returl=%2Fpreview%2Fitem.html%3Fbranch%3Dbranch-under-test&formname=RewrittenForm", context.Request.QueryString.Value);
+            Assert.Equal("12345", adapter.Request.QueryString["id"]);
+            Assert.Equal("RewrittenForm", adapter.Request.QueryString["formname"]);
+            Assert.Equal("/preview/item.html?branch=branch-under-test", adapter.Request.QueryString["returl"]);
+        });
+
+    [Fact]
     public Task RewritePathViaCoreApis()
         => RunTest("/", context =>
         {
