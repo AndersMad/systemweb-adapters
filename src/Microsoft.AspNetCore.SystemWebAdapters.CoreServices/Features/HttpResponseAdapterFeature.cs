@@ -31,6 +31,7 @@ internal class HttpResponseAdapterFeature :
     }
 
     private readonly IHttpResponseBodyFeature _responseBodyFeature;
+    private readonly CancellationToken _requestAborted;
 
     private FileBufferingWriteStream? _bufferedStream;
     private PipeWriter? _pipeWriter;
@@ -39,9 +40,10 @@ internal class HttpResponseAdapterFeature :
     private bool _suppressContent;
     private Stream? _filter;
 
-    public HttpResponseAdapterFeature(IHttpResponseBodyFeature httpResponseBody)
+    public HttpResponseAdapterFeature(IHttpResponseBodyFeature httpResponseBody, CancellationToken requestAborted)
     {
         _responseBodyFeature = httpResponseBody;
+        _requestAborted = requestAborted;
         _state = StreamState.NotStarted;
     }
 
@@ -286,7 +288,20 @@ internal class HttpResponseAdapterFeature :
             await _pipeWriter.CompleteAsync();
         }
 
-        await _responseBodyFeature.CompleteAsync();
+        if (_requestAborted.IsCancellationRequested)
+        {
+            return;
+        }
+
+        try
+        {
+            await _responseBodyFeature.CompleteAsync();
+        }
+        catch (NullReferenceException) when (_requestAborted.IsCancellationRequested)
+        {
+            // IIS can tear down its response internals during an aborted request while we're
+            // still unwinding the System.Web end-request pipeline.
+        }
     }
 
     public override void Flush() => CurrentStream.Flush();

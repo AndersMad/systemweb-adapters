@@ -14,7 +14,7 @@ internal sealed class ResponseFeaturesMiddleware(RequestDelegate next)
     {
         var responseBodyFeature = context.Features.GetRequiredFeature<IHttpResponseBodyFeature>();
 
-        using var adapterFeature = new HttpResponseAdapterFeature(responseBodyFeature);
+        using var adapterFeature = new HttpResponseAdapterFeature(responseBodyFeature, context.RequestAborted);
 
         context.Features.Set<IHttpResponseBodyFeature>(adapterFeature);
         context.Features.Set<IHttpResponseBufferingFeature>(adapterFeature);
