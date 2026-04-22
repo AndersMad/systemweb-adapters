@@ -10,12 +10,14 @@ using System.Security.Claims;
 using System.Security.Principal;
 using System.Text;
 using System.Web;
+using System.Web.Configuration;
 using AutoFixture;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SystemWebAdapters.Features;
 using Microsoft.AspNetCore.SystemWebAdapters.Internal;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
@@ -281,6 +283,27 @@ namespace Microsoft.AspNetCore.SystemWebAdapters
 
             // Assert
             Assert.Equal(userAgent, result);
+        }
+
+        [Fact]
+        public void BrowserCapabilitiesFallbackWithoutUserAgent()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            services.AddSingleton<IBrowserCapabilitiesFactory, BrowserCapabilitiesFactory>();
+
+            var context = new DefaultHttpContext();
+            context.RequestServices = services.BuildServiceProvider();
+
+            var request = new HttpRequest(context.Request);
+
+            // Act
+            var browser = request.Browser;
+
+            // Assert
+            Assert.Equal("Unknown", browser.Browser);
+            Assert.Equal(new Version(0, 0), browser.EcmaScriptVersion);
+            Assert.Equal(new Version(0, 0), browser.W3CDomVersion);
         }
 
         [Fact]

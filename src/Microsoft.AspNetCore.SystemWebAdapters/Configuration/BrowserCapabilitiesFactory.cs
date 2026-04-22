@@ -50,18 +50,14 @@ internal sealed class BrowserCapabilitiesFactory : IBrowserCapabilitiesFactory
     {
         var userAgent = request.Headers.UserAgent.ToString();
 
-        if (string.IsNullOrWhiteSpace(userAgent))
-        {
-            return EmptyBrowserFeatures.Instance;
-        }
-        else if (request.HttpContext.RequestServices.GetService<IMemoryCache>() is { } cache)
+        if (request.HttpContext.RequestServices.GetService<IMemoryCache>() is { } cache)
         {
             return cache.GetOrCreate(userAgent, entry =>
             {
                 entry.SlidingExpiration = TimeSpan.FromMinutes(2);
 
                 return Parse(userAgent);
-            }) ?? EmptyBrowserFeatures.Instance;
+            }) ?? Parse(userAgent);
         }
         else
         {
@@ -717,12 +713,5 @@ internal sealed class BrowserCapabilitiesFactory : IBrowserCapabilitiesFactory
 
         public RegexResult Process(string userAgent)
             => new(_regex?.Match(userAgent), _regex2?.Match(userAgent));
-    }
-
-    private sealed class EmptyBrowserFeatures : IHttpBrowserCapabilityFeature
-    {
-        public static IHttpBrowserCapabilityFeature Instance { get; } = new EmptyBrowserFeatures();
-
-        public string? this[string key] => null;
     }
 }
