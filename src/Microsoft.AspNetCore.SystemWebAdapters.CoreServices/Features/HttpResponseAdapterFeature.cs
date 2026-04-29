@@ -293,6 +293,13 @@ internal class HttpResponseAdapterFeature :
             return;
         }
 
+        // Conditional requests such as cached static files returning 304 Not Modified
+        // suppress the body. IIS may throw from response-body completion in that state.
+        if (_suppressContent)
+        {
+            return;
+        }
+
         try
         {
             await _responseBodyFeature.CompleteAsync();

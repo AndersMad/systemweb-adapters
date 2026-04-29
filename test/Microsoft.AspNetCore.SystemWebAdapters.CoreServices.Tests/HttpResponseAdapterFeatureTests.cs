@@ -48,6 +48,24 @@ public class HttpResponseAdapterFeatureTests
         responseBodyFeature.Verify(f => f.CompleteAsync(), Times.Once);
     }
 
+    [Fact]
+    public async Task CompleteAsyncSkipsResponseBodyCompletionWhenContentIsSuppressed()
+    {
+        // Arrange
+        var responseBodyFeature = CreateResponseBodyFeature();
+        responseBodyFeature.Setup(f => f.CompleteAsync()).ThrowsAsync(new TestNullReferenceException());
+
+        await using var feature = new HttpResponseAdapterFeature(responseBodyFeature.Object, CancellationToken.None);
+        ((IHttpResponseBufferingFeature)feature).EnableBuffering(null, null);
+        feature.SuppressContent = true;
+
+        // Act
+        await ((IHttpResponseEndFeature)feature).EndAsync();
+
+        // Assert
+        responseBodyFeature.Verify(f => f.CompleteAsync(), Times.Never);
+    }
+
     private static Mock<IHttpResponseBodyFeature> CreateResponseBodyFeature()
     {
         var responseBodyFeature = new Mock<IHttpResponseBodyFeature>(MockBehavior.Strict);
