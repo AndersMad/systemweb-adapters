@@ -66,6 +66,27 @@ public class HttpResponseAdapterFeatureTests
         responseBodyFeature.Verify(f => f.CompleteAsync(), Times.Never);
     }
 
+    [Fact]
+    public async Task EndMarksResponseEndedWithoutCompletingBody()
+    {
+        // Arrange
+        var responseBodyFeature = CreateResponseBodyFeature();
+        responseBodyFeature.Setup(f => f.CompleteAsync()).Returns(Task.CompletedTask);
+
+        await using var feature = new HttpResponseAdapterFeature(responseBodyFeature.Object, CancellationToken.None);
+        var endFeature = (IHttpResponseEndFeature)feature;
+
+        // Act
+        ((IHttpResponseEndRequestFeature)feature).End();
+
+        // Assert
+        Assert.True(endFeature.IsEnded);
+        responseBodyFeature.Verify(f => f.CompleteAsync(), Times.Never);
+
+        await endFeature.EndAsync();
+        responseBodyFeature.Verify(f => f.CompleteAsync(), Times.Once);
+    }
+
     private static Mock<IHttpResponseBodyFeature> CreateResponseBodyFeature()
     {
         var responseBodyFeature = new Mock<IHttpResponseBodyFeature>(MockBehavior.Strict);

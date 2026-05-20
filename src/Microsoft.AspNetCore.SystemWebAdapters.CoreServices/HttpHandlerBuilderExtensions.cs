@@ -159,11 +159,17 @@ public static class HttpHandlerBuilderExtensions
             }
         }
 
-        private sealed class RequestEndThrowingFeature : IHttpResponseEndFeature
+        private sealed class RequestEndThrowingFeature : IHttpResponseEndFeature, IHttpResponseEndRequestFeature
         {
             public bool IsEnded { get; private set; }
 
             public Task EndAsync()
+            {
+                ((IHttpResponseEndRequestFeature)this).End();
+                return Task.CompletedTask;
+            }
+
+            void IHttpResponseEndRequestFeature.End()
             {
                 IsEnded = true;
                 throw new RequestEndException();

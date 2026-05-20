@@ -340,7 +340,19 @@ namespace System.Web
 
         public Task FlushAsync() => Response.Body.FlushAsync(Response.HttpContext.RequestAborted);
 
-        public void End() => Response.HttpContext.Features.GetRequiredFeature<IHttpResponseEndFeature>().EndAsync().GetAwaiter().GetResult();
+        public void End()
+        {
+            var feature = Response.HttpContext.Features.GetRequiredFeature<IHttpResponseEndFeature>();
+
+            if (feature is IHttpResponseEndRequestFeature endFeature)
+            {
+                endFeature.End();
+            }
+            else
+            {
+                AsyncBridge.Run(feature.EndAsync);
+            }
+        }
 
         public void Write(char ch) => Output.Write(ch);
 
@@ -366,7 +378,7 @@ namespace System.Web
             => TransmitFile(filename, 0, -1);
 
         public void TransmitFile(string filename, long offset, long length)
-            => Response.SendFileAsync(filename, offset, length >= 0 ? length : null).GetAwaiter().GetResult();
+            => AsyncBridge.Run(() => Response.SendFileAsync(filename, offset, length >= 0 ? length : null));
 
         [return: NotNullIfNotNull(nameof(response))]
         public static implicit operator HttpResponse?(HttpResponseCore? response) => response?.HttpContext.AsSystemWeb().Response;

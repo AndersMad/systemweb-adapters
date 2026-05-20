@@ -179,6 +179,32 @@ public class HttpResponseTests
     }
 
     [Fact]
+    public void EndUsesSynchronousEndRequestFeatureWhenAvailable()
+    {
+        // Arrange
+        var feature = new TestEndFeature();
+
+        var features = new FeatureCollection();
+        features.Set<IHttpResponseEndFeature>(feature);
+
+        var context = new Mock<HttpContextCore>();
+        context.Setup(c => c.Features).Returns(features);
+
+        var responseCore = new Mock<HttpResponseCore>();
+        responseCore.Setup(r => r.HttpContext).Returns(context.Object);
+        responseCore.SetupProperty(r => r.StatusCode);
+
+        var response = new HttpResponse(responseCore.Object);
+
+        // Act
+        response.End();
+
+        // Assert
+        Assert.True(feature.IsEnded);
+        Assert.False(feature.EndAsyncCalled);
+    }
+
+    [Fact]
     public void HeadersWrittenReturnsTrueWhenContextDisposed()
     {
         // Arrange
@@ -670,4 +696,19 @@ internal sealed class ThrowingResponseFeatureCollection : IFeatureCollection
     public IEnumerator<KeyValuePair<Type, object>> GetEnumerator() => _inner.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+}
+
+internal sealed class TestEndFeature : IHttpResponseEndFeature, IHttpResponseEndRequestFeature
+{
+    public bool IsEnded { get; private set; }
+
+    public bool EndAsyncCalled { get; private set; }
+
+    public Task EndAsync()
+    {
+        EndAsyncCalled = true;
+        return Task.CompletedTask;
+    }
+
+    void IHttpResponseEndRequestFeature.End() => IsEnded = true;
 }

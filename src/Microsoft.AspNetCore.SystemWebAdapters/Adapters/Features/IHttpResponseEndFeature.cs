@@ -20,4 +20,9 @@ public interface IHttpResponseEndFeature
     Task EndAsync();
 }
 
+internal interface IHttpResponseEndRequestFeature
+{
+    void End();
+}
+
 #endif

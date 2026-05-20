@@ -8,6 +8,7 @@ using System.Web.SessionState;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SystemWebAdapters.Features;
+using Microsoft.AspNetCore.SystemWebAdapters.Internal;
 using Microsoft.AspNetCore.SystemWebAdapters.SessionState;
 using Microsoft.AspNetCore.SystemWebAdapters.SessionState.Wrapped;
 using Microsoft.Extensions.DependencyInjection;
@@ -100,7 +101,7 @@ internal partial class SessionLoadMiddleware
             _state = new Lazy<ISessionState>(() =>
             {
                 log();
-                return manager.CreateAsync(context, metadata).GetAwaiter().GetResult();
+                return AsyncBridge.Run(() => manager.CreateAsync(context, metadata));
             });
         }
 

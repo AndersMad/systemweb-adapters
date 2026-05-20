@@ -13,7 +13,7 @@ using Microsoft.Extensions.ObjectPool;
 
 namespace Microsoft.AspNetCore.SystemWebAdapters.Features;
 
-internal sealed class HttpApplicationFeature : IHttpApplicationFeature, IHttpResponseEndFeature, IRequestExceptionFeature, IDisposable
+internal sealed class HttpApplicationFeature : IHttpApplicationFeature, IHttpResponseEndFeature, IHttpResponseEndRequestFeature, IRequestExceptionFeature, IDisposable
 {
     private static readonly HashSet<ApplicationEvent> _suppressThrow =
     [
@@ -27,6 +27,7 @@ internal sealed class HttpApplicationFeature : IHttpApplicationFeature, IHttpRes
 
     private object? _contextOrApplication;
     private List<Exception>? _exceptions;
+    private bool _hasCompletedEnd;
 
     public HttpApplicationFeature(HttpContextCore context, IHttpResponseEndFeature previousEnd, ObjectPool<HttpApplication> pool)
     {
@@ -66,6 +67,12 @@ internal sealed class HttpApplicationFeature : IHttpApplicationFeature, IHttpRes
     }
 
     void IHttpApplicationFeature.CompleteRequest() => IsRequestCompleted = true;
+
+    void IHttpResponseEndRequestFeature.End()
+    {
+        IsRequestCompleted = true;
+        IsEnded = true;
+    }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Must handle all exceptions here")]
     private void RaiseEvent(ApplicationEvent appEvent)
@@ -146,19 +153,20 @@ internal sealed class HttpApplicationFeature : IHttpApplicationFeature, IHttpRes
 
     async Task IHttpResponseEndFeature.EndAsync()
     {
-        if (IsEnded)
+        if (_hasCompletedEnd)
         {
             return;
         }
 
         IsRequestCompleted = true;
         IsEnded = true;
+        _hasCompletedEnd = true;
 
         RaiseEvent(ApplicationEvent.LogRequest);
         RaiseEvent(ApplicationEvent.PostLogRequest);
         RaiseEvent(ApplicationEvent.EndRequest);
 
-        await _previous.EndAsync();
+        await _previous.EndAsync().ConfigureAwait(false);
 
         ThrowIfErrors();
     }

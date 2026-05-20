@@ -20,6 +20,7 @@ internal class HttpResponseAdapterFeature :
     IHttpResponseBodyFeature,
     IHttpResponseBufferingFeature,
     IHttpResponseEndFeature,
+    IHttpResponseEndRequestFeature,
     IHttpResponseContentFeature
 {
     private enum StreamState
@@ -38,6 +39,7 @@ internal class HttpResponseAdapterFeature :
     private StreamState _state;
     private Func<FileBufferingWriteStream>? _factory;
     private bool _suppressContent;
+    private bool _isEndRequested;
     private Stream? _filter;
 
     public HttpResponseAdapterFeature(IHttpResponseBodyFeature httpResponseBody, CancellationToken requestAborted)
@@ -183,7 +185,9 @@ internal class HttpResponseAdapterFeature :
 
     Task IHttpResponseEndFeature.EndAsync() => CompleteAsync();
 
-    bool IHttpResponseEndFeature.IsEnded => _state == StreamState.Complete;
+    bool IHttpResponseEndFeature.IsEnded => _isEndRequested || _state == StreamState.Complete;
+
+    void IHttpResponseEndRequestFeature.End() => _isEndRequested = true;
 
     void IHttpResponseContentFeature.ClearContent()
     {
@@ -278,6 +282,8 @@ internal class HttpResponseAdapterFeature :
         {
             return;
         }
+
+        _isEndRequested = true;
 
         await FlushInternalAsync();
 

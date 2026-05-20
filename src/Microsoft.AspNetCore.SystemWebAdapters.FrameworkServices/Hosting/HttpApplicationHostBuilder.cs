@@ -73,7 +73,7 @@ public sealed class HttpApplicationHostBuilder : IHostApplicationBuilder
         // the caller tries to use them immediately after calling this method, such as HttpRuntime.WebObjectFactory
         try
         {
-            tcs.Task.GetAwaiter().GetResult();
+            AsyncBridge.Run(() => tcs.Task);
         }
         finally
         {
