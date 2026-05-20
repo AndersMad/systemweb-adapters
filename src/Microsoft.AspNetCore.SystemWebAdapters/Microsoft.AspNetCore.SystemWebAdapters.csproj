@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net9.0;net10.0;netstandard2.0;net45;net472</TargetFrameworks>
+    <TargetFramework>net10.0</TargetFramework>
     <IsPackable>true</IsPackable>
 
     <!-- This will validate that the package will unify correctly with System.Web.dll -->
@@ -25,22 +25,7 @@
     <Compile Remove="Generated/*.cs" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
-    <Compile Remove="**/*" />
-    <Compile Include="Properties/PropertyInfo.cs" />
-    <Compile Include="Generated/Ref.*.cs" />
-    <Compile Include="Generated\Obsolete.cs" />
-    <Compile Include="Adapters/SessionState/ISessionState.cs" />
-    <Compile Include="IHtmlString.cs" />
-    <Compile Include="HtmlString.cs" />
-    <Compile Include="AppConfiguration.cs" />
-    <Compile Include="Adapters/IConfigurationAccessor.cs" />
-    <Compile Include="HttpContextRequestServicesExtensions.cs" />
-
-    <PackageReference Include="System.Security.Principal.Windows" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'net9.0' OR '$(TargetFramework)' == 'net10.0' ">
+  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
 
     <PackageReference Include="System.Runtime.Caching" />
@@ -48,28 +33,6 @@
     <Using Include="Microsoft.AspNetCore.Http.HttpContext" Alias="HttpContextCore" />
     <Using Include="Microsoft.AspNetCore.Http.HttpResponse" Alias="HttpResponseCore" />
     <Using Include="Microsoft.AspNetCore.Http.HttpRequest" Alias="HttpRequestCore" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net472' OR '$(TargetFramework)' == 'net45' ">
-    <Compile Remove="**/*" />
-    <Compile Include="Properties/PropertyInfo.cs" />
-    <Compile Include="Adapters/**/*.cs" />
-    <Compile Include="Generated/TypeForwards.*.cs" />
-
-    <Compile Include="IHtmlString.cs" />
-    <Compile Include="HtmlString.cs" />
-    
-    <Compile Condition=" '$(TargetFramework)' != 'net45' " Include="HttpContextRequestServicesExtensions.cs" />
-
-    <Compile Include="AppConfiguration.cs" />
-    <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" />
-
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
-
-    <Reference Include="System.Web" />
   </ItemGroup>
 
   <ItemGroup>

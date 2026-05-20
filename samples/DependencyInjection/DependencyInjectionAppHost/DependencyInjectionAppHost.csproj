@@ -15,7 +15,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Aspire.Hosting.IncrementalMigration\Aspire.Hosting.IncrementalMigration.csproj" IsAspireProjectResource="false" />
-    <ProjectReference Include="..\DependencyInjectionFramework\DependencyInjectionFramework.csproj" />
 
   </ItemGroup>
 

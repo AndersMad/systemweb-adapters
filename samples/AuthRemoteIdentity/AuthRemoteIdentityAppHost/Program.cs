@@ -14,11 +14,6 @@ var db = builder.AddSqlServer("identityserver", password: password)
     .WithLifetime(ContainerLifetime.Persistent)
     .AddDatabase("identity");
 
-var frameworkApp = builder.AddIISExpressProject<Projects.AuthRemoteIdentityFramework>("framework")
-    .WithReference(db, connectionName: "DefaultConnection")
-    .WaitFor(db)
-    .WithHttpHealthCheck();
-
 var owin = builder.AddProject<Projects.AuthRemoteIdentityCore>("owin")
     .WithHttpEndpoint(targetPort: 5000)
     .WithHttpsEndpoint(targetPort: 5001)
@@ -26,8 +21,6 @@ var owin = builder.AddProject<Projects.AuthRemoteIdentityCore>("owin")
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
     .WithEnvironment("SAMPLE_MODE", "OWIN")
     .WithReference(db, connectionName: "DefaultConnection")
-    .WithIncrementalMigrationFallback(frameworkApp, apiKey: apiKey)
-    .WaitFor(frameworkApp)
     .WaitFor(db);
 
 var coreApp = builder.AddProject<Projects.AuthRemoteIdentityCore>("core")
@@ -35,8 +28,6 @@ var coreApp = builder.AddProject<Projects.AuthRemoteIdentityCore>("core")
     .WithHttpsEndpoint(targetPort: 5003)
     .WithHttpHealthCheck("/health")
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
-    .WithEnvironment("SAMPLE_MODE", "REMOTE")
-    .WaitFor(frameworkApp)
-    .WithIncrementalMigrationFallback(frameworkApp, options => options.RemoteAuthentication = RemoteAuthentication.DefaultScheme, apiKey);
+    .WithEnvironment("SAMPLE_MODE", "REMOTE");
 
 builder.Build().Run();

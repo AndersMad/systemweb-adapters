@@ -3,8 +3,8 @@
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_AddAnalyzersToOutput</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
 
-  <!-- We condition it on netstandard2.0 so we only include them once -->
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+  <!-- We condition it on net10.0 so we only include them once -->
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net10.0' ">
     <ProjectReference Include="..\Microsoft.AspNetCore.SystemWebAdapters.Analyzers.CSharp\Microsoft.AspNetCore.SystemWebAdapters.Analyzers.CSharp.csproj"
       ReferenceOutputAssembly="false"
       OutputItemType="_Analyzer_SystemWeb_CSharp"

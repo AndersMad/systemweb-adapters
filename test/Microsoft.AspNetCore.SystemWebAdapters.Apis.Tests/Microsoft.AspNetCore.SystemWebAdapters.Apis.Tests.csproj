@@ -10,6 +10,7 @@
     <PackageReference Include="Basic.Reference.Assemblies" />
     <PackageReference Include="Microsoft.CodeAnalysis" />
     <PackageReference Include="Moq" />
+    <PackageReference Include="System.Reflection.MetadataLoadContext" />
   </ItemGroup>
 
   <ItemGroup>
@@ -31,7 +32,5 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
-  <Import Project="CopyFrameworkAdapters.targets" />
 
 </Project>

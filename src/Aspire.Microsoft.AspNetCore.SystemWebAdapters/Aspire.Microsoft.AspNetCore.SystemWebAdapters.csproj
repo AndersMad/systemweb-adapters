@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net9.0;net10.0;net472</TargetFrameworks>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>true</IsPackable>
@@ -15,13 +15,9 @@
     <Description>Aspire integration for Microsoft.AspNetCore.SystemWebAdapters to support incremental migration scenarios.</Description>
   </PropertyGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'net9.0' OR '$(TargetFramework)' == 'net10.0'">
+  <ItemGroup>
     <ProjectReference Include="..\Microsoft.AspNetCore.SystemWebAdapters.CoreServices\Microsoft.AspNetCore.SystemWebAdapters.CoreServices.csproj" />
     <PackageReference Include="Yarp.ReverseProxy" />
-  </ItemGroup>
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net472'">
-    <ProjectReference Include="..\Microsoft.AspNetCore.SystemWebAdapters.FrameworkServices\Microsoft.AspNetCore.SystemWebAdapters.FrameworkServices.csproj" />
-    <Reference Include="System.Web" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Aspire.Hosting.IncrementalMigration\AspireConstants.Shared.cs" Link="AspireConstants.Shared.cs" />

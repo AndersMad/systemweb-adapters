@@ -11,7 +11,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Aspire.Hosting.IncrementalMigration\Aspire.Hosting.IncrementalMigration.csproj" IsAspireProjectResource="false" />
     <ProjectReference Include="..\AppConfigCore\AppConfigCore.csproj" />
-    <ProjectReference Include="..\AppConfigFramework\AppConfigFramework.csproj" />
   </ItemGroup>
 
 </Project>

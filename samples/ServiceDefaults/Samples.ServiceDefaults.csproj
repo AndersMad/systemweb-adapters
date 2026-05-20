@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net481;$(SAMPLES_TFM)</TargetFrameworks>
+    <TargetFramework>$(SAMPLES_TFM)</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsAspireSharedProject>true</IsAspireSharedProject>
@@ -23,14 +23,6 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
 
     <Compile Remove="Framework/**/*" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net481' ">
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.AspNet" />
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Composite" />
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Physical" />
   </ItemGroup>
 
   <ItemGroup>

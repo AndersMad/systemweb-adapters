@@ -11,7 +11,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Aspire.Hosting.IncrementalMigration\Aspire.Hosting.IncrementalMigration.csproj" IsAspireProjectResource="false" />
     <ProjectReference Include="..\AuthRemoteFormsAuthCore\AuthRemoteFormsAuthCore.csproj" />
-    <ProjectReference Include="..\AuthRemoteFormsAuthFramework\AuthRemoteFormsAuthFramework.csproj" />
   </ItemGroup>
 
 </Project>
